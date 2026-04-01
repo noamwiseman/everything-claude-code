@@ -15,6 +15,18 @@ Measures whether coding agents actually follow skills, rules, or agent definitio
 5. Checking temporal ordering deterministically
 6. Generating self-contained reports with spec, prompts, and timelines
 
+## Prerequisites
+
+The following must be available before running skill-comply:
+
+| Dependency | Purpose | Install |
+|------------|---------|---------|
+| **Python >=3.9** | Runs the compliance scripts | `brew install python` / system package manager |
+| **uv** | Python environment and script runner | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| **stream-json** (npm) | Parses Claude's streaming JSON tool call output | `npm install -g stream-json` |
+
+Verify: `uv --version && python3 --version && node -e "require('stream-json')"` should all succeed without errors.
+
 ## Supported Targets
 
 - **Skills** (`skills/*/SKILL.md`): Workflow skills like search-first, TDD guides
@@ -40,6 +52,16 @@ uv run python -m scripts.run --dry-run ~/.claude/skills/search-first/SKILL.md
 # Custom models
 uv run python -m scripts.run --gen-model haiku --model sonnet <path>
 ```
+
+### Fallback: if `claude -p` is unavailable or a run fails
+
+`claude -p` (headless/programmatic mode) is required to capture tool call traces. If it is unavailable:
+
+1. **Check Claude Code version** — `claude --version`. Headless mode was added in Claude Code 1.x; upgrade if needed: `npm install -g @anthropic-ai/claude-code`.
+2. **Authentication** — ensure `claude auth status` shows a valid session. Re-authenticate with `claude auth login` if needed.
+3. **Dry-run to isolate** — run with `--dry-run` to confirm spec generation works independently of the live model call.
+4. **Manual alternative** — open a Claude Code session, paste the scenario prompt manually, and review the tool call sequence in the conversation. Record compliance observations by hand against the expected behavioral sequence in the dry-run output.
+5. **Partial failures** — if a single scenario fails mid-run, the other scenarios' results are still valid. Check `~/.claude/skill-comply-runs/` for any partial output files from the failed run.
 
 ## Key Concept: Prompt Independence
 

@@ -9,6 +9,17 @@
 
 Types: feat, fix, refactor, docs, test, chore, perf, ci
 
+**Examples:**
+
+| | Message |
+|---|---|
+| good | `feat: add OAuth2 login with Google provider` |
+| good | `fix: prevent crash when config file is missing` |
+| good | `chore: update eslint to v9 flat config` |
+| bad | `fixed stuff` — no type, vague description |
+| bad | `feat: WIP` — not descriptive |
+| bad | `Updated the user authentication flow and also fixed some bugs and refactored the login page` — too long, multiple concerns, no type |
+
 Note: Attribution disabled globally via ~/.claude/settings.json.
 
 ## Pull Request Workflow

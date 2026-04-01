@@ -64,16 +64,25 @@ From the reconnaissance data, identify:
 - API style: REST, GraphQL, gRPC, tRPC
 
 **Key Directories**
-Map the top-level directories to their purpose:
+Map the top-level directories to their purpose based on what is actually detected. Examples:
 
-<!-- Example for a React project — replace with detected directories -->
 ```
-src/components/  → React UI components
-src/api/         → API route handlers
-src/lib/         → Shared utilities
-src/db/          → Database models and migrations
+# Node/TypeScript project
+src/routes/      → HTTP handlers
+src/services/    → Business logic
+src/db/          → Models and migrations
 tests/           → Test suites
-scripts/         → Build and deployment scripts
+
+# Go project
+cmd/             → CLI entry points
+internal/        → Private packages
+pkg/             → Exported packages
+api/             → OpenAPI specs or proto definitions
+
+# Python project
+src/<package>/   → Main package
+tests/           → pytest suites
+scripts/         → Dev/ops utilities
 ```
 
 **Data Flow**
@@ -117,30 +126,24 @@ Produce two outputs:
 [2-3 sentences: what this project does and who it serves]
 
 ## Tech Stack
-<!-- Example for a Next.js project — replace with detected stack -->
 | Layer | Technology | Version |
 |-------|-----------|---------|
-| Language | TypeScript | 5.x |
-| Framework | Next.js | 14.x |
-| Database | PostgreSQL | 16 |
-| ORM | Prisma | 5.x |
-| Testing | Jest + Playwright | - |
+| Language | [detected] | [detected] |
+| Framework | [detected or N/A] | [detected] |
+| Database | [detected or N/A] | [detected] |
+| Testing | [detected] | - |
 
 ## Architecture
 [Diagram or description of how components connect]
 
 ## Key Entry Points
-<!-- Example for a Next.js project — replace with detected paths -->
-- **API routes**: `src/app/api/` — Next.js route handlers
-- **UI pages**: `src/app/(dashboard)/` — authenticated pages
-- **Database**: `prisma/schema.prisma` — data model source of truth
-- **Config**: `next.config.ts` — build and runtime config
+[List entry points detected from reconnaissance — file paths and their role]
 
 ## Directory Map
 [Top-level directory → purpose mapping]
 
 ## Request Lifecycle
-[Trace one API request from entry to response]
+[Trace one request/operation from entry to response/output]
 
 ## Conventions
 - [File naming pattern]
@@ -149,22 +152,16 @@ Produce two outputs:
 - [Git workflow]
 
 ## Common Tasks
-<!-- Example for a Node.js project — replace with detected commands -->
-- **Run dev server**: `npm run dev`
-- **Run tests**: `npm test`
-- **Run linter**: `npm run lint`
-- **Database migrations**: `npx prisma migrate dev`
-- **Build for production**: `npm run build`
+[Detected commands from manifest — examples:]
+- **Run dev server**: `[detected command]`
+- **Run tests**: `[detected command]`
+- **Run linter**: `[detected command]`
+- **Build**: `[detected command]`
 
 ## Where to Look
-<!-- Example for a Next.js project — replace with detected paths -->
 | I want to... | Look at... |
 |--------------|-----------|
-| Add an API endpoint | `src/app/api/` |
-| Add a UI page | `src/app/(dashboard)/` |
-| Add a database table | `prisma/schema.prisma` |
-| Add a test | `tests/` matching the source path |
-| Change build config | `next.config.ts` |
+[Fill in based on detected project structure]
 ```
 
 #### Output 2: Starter CLAUDE.md
@@ -175,16 +172,16 @@ Generate or update a project-specific CLAUDE.md based on detected conventions. I
 # Project Instructions
 
 ## Tech Stack
-[Detected stack summary]
+[Detected stack summary — language, framework, database, build tool]
 
 ## Code Style
 - [Detected naming conventions]
 - [Detected patterns to follow]
 
 ## Testing
-- Run tests: `[detected test command]`
-- Test pattern: [detected test file convention]
-- Coverage: [if configured, the coverage command]
+- Run tests: `[detected command — npm test / go test ./... / pytest / cargo test]`
+- Test pattern: [detected convention — *.test.ts / *_test.go / test_*.py / *_spec.rb]
+- Coverage: [detected command, if configured]
 
 ## Build & Run
 - Dev: `[detected dev command]`
@@ -217,15 +214,15 @@ Generate or update a project-specific CLAUDE.md based on detected conventions. I
 
 ## Examples
 
-### Example 1: First time in a new repo
+### Example 1: First time in a new repo (any language)
 **User**: "Onboard me to this codebase"
 **Action**: Run full 4-phase workflow → produce Onboarding Guide + Starter CLAUDE.md
-**Output**: Onboarding Guide printed directly to the conversation, plus a `CLAUDE.md` written to the project root
+**Output**: Onboarding Guide printed to conversation; `CLAUDE.md` written to project root with detected stack (Go/Rust/Python/Node/etc.)
 
 ### Example 2: Generate CLAUDE.md for existing project
 **User**: "Generate a CLAUDE.md for this project"
 **Action**: Run Phases 1-3, skip Onboarding Guide, produce only CLAUDE.md
-**Output**: Project-specific `CLAUDE.md` with detected conventions
+**Output**: Project-specific `CLAUDE.md` with detected conventions and build commands
 
 ### Example 3: Enhance existing CLAUDE.md
 **User**: "Update the CLAUDE.md with current project conventions"

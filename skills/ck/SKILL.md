@@ -139,6 +139,14 @@ unsaved sessions, git activity since last save, and goal mismatches vs CLAUDE.md
 
 ---
 
+## Bundled in ECC
+
+The CK scripts are bundled in [everything-claude-code](https://github.com/your-org/everything-claude-code) under `skills/ck/` (commands at `skills/ck/commands/`, hook at `skills/ck/hooks/`). When installed via ECC, the skill is copied to `~/.claude/skills/ck/` automatically — the paths used in the commands above refer to that installed location.
+
+> **Lighter alternative:** Claude Code's native auto-memory (`~/.claude/projects/<project-hash>/memory/`) persists facts across sessions without any scripts or hooks. It works well for single-project use where you only need short notes rather than structured session history.
+
+---
+
 ## Rules
 - Always expand `~` as `$HOME` in Bash calls.
 - Commands are case-insensitive: `/CK:SAVE`, `/ck:save`, `/Ck:Save` all work.

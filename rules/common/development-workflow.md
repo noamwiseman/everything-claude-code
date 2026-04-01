@@ -7,10 +7,10 @@ The Feature Implementation Workflow describes the development pipeline: research
 ## Feature Implementation Workflow
 
 0. **Research & Reuse** _(mandatory before any new implementation)_
-   - **GitHub code search first:** Run `gh search repos` and `gh search code` to find existing implementations, templates, and patterns before writing anything new.
-   - **Library docs second:** Use Context7 or primary vendor docs to confirm API behavior, package usage, and version-specific details before implementing.
-   - **Exa only when the first two are insufficient:** Use Exa for broader web research or discovery after GitHub search and primary docs.
-   - **Check package registries:** Search npm, PyPI, crates.io, and other registries before writing utility code. Prefer battle-tested libraries over hand-rolled solutions.
+   - **Vendor docs first:** Use Context7 or primary vendor/language docs to confirm API behavior, package usage, and version-specific details before implementing.
+   - **Package registries second:** Search npm, PyPI, crates.io, pkg.go.dev, and other registries before writing utility code. Prefer battle-tested libraries over hand-rolled solutions.
+   - **GitHub code search third:** Run `gh search repos` and `gh search code` to find existing implementations, templates, and patterns.
+   - **Exa only when the above are insufficient:** Use Exa for broader web research or discovery.
    - **Search for adaptable implementations:** Look for open-source projects that solve 80%+ of the problem and can be forked, ported, or wrapped.
    - Prefer adopting or porting a proven approach over writing net-new code when it meets the requirement.
 

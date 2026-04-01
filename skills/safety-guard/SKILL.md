@@ -68,8 +68,36 @@ Agents can read anything but only write to `src/api/`. Destructive commands are 
 
 Uses PreToolUse hooks to intercept Bash, Write, Edit, and MultiEdit tool calls. Checks the command/path against the active rules before allowing execution.
 
+### Configuring in settings.json
+
+Add a PreToolUse hook entry to `.claude/settings.json` (or `~/.claude/settings.json` for user-wide):
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/hooks/safety-guard.js"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ## Integration
 
 - Enable by default for `codex -a never` sessions
 - Pair with observability risk scoring in ECC 2.0
 - Logs all blocked actions to `~/.claude/safety-guard.log`
+
+### Log file details
+
+- **Location**: `~/.claude/safety-guard.log` (created automatically on first blocked action)
+- **Format**: One JSON object per line — `{"ts":"<ISO8601>","tool":"<ToolName>","input":<input>,"reason":"<why blocked>"}`
+- **Viewing**: `tail -f ~/.claude/safety-guard.log` to stream live, or `cat ~/.claude/safety-guard.log | jq '.'` for pretty-printed history

@@ -1,3 +1,7 @@
+---
+description: Sync documentation with the codebase, generating from source-of-truth files.
+---
+
 # Update Documentation
 
 Sync documentation with the codebase, generating from source-of-truth files.
@@ -24,6 +28,10 @@ Sync documentation with the codebase, generating from source-of-truth files.
 | `npm run dev` | Start development server with hot reload |
 | `npm run build` | Production build with type checking |
 | `npm test` | Run test suite with coverage |
+| `cargo build --release` | Production build (Rust) |
+| `go test ./...` | Run test suite (Go) |
+| `make dev` | Start dev server (Makefile-based project) |
+| `uv run pytest` | Run test suite (Python/uv) |
 ```
 
 ## Step 3: Generate Environment Documentation

@@ -39,6 +39,14 @@ Launch 3 agents in parallel:
 First agent 1, then agent 2, then agent 3
 ```
 
+## When NOT to Use Agents
+
+- **Simple, single-file edits** — direct tool use is faster than spawning a subagent
+- **Short lookups** — use Grep/Glob/Read directly; agent overhead isn't worth it
+- **Sequential dependent steps** — if step 2 needs step 1's output, a subagent adds latency with no benefit
+- **When context must be shared** — subagents get a copy of context, not live access; use inline tools if the task needs the current conversation state
+- **When you'd spend more time writing the prompt than doing the task** — agents are delegation; don't delegate 10-second tasks
+
 ## Multi-Perspective Analysis
 
 For complex problems, use split role sub-agents:

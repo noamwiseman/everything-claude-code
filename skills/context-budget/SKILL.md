@@ -30,7 +30,7 @@ Scan all component directories and estimate token consumption:
 **Skills** (`skills/*/SKILL.md`)
 - Count tokens per SKILL.md
 - Flag: files >400 lines
-- Check for duplicate copies in `.agents/skills/` — skip identical copies to avoid double-counting
+- Check for duplicate copies in `~/.claude/skills/` — skip identical copies to avoid double-counting
 
 **Rules** (`rules/**/*.md`)
 - Count tokens per file

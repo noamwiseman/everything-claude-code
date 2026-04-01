@@ -16,6 +16,15 @@ Applies the "deterministic collection + LLM judgment" principle: scripts collect
 - After a skill-stocktake reveals patterns that should be rules
 - When rules feel incomplete relative to the skills being used
 
+## Scripts
+
+The two inventory scripts are bundled at `skills/rules-distill/scripts/` in the ECC repo and are installed to `~/.claude/skills/rules-distill/scripts/` as part of a full ECC install:
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/scan-skills.sh` | Enumerate installed skill files and extract frontmatter |
+| `scripts/scan-rules.sh` | Index rule files and their headings |
+
 ## How It Works
 
 The rules distillation process follows three phases:

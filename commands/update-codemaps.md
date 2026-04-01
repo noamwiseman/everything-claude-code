@@ -1,6 +1,20 @@
+---
+description: Analyze the codebase structure and generate token-lean architecture documentation.
+---
+
 # Update Codemaps
 
 Analyze the codebase structure and generate token-lean architecture documentation.
+
+## When to Run
+
+Run this command when any of the following apply:
+
+- After a major refactor or feature addition that changes module structure
+- After adding or removing top-level directories, services, or packages
+- When codemaps are stale (freshness header is 90+ days old)
+- After onboarding new dependencies or external integrations
+- On a periodic schedule (e.g. monthly) for active codebases
 
 ## Step 1: Scan Project Structure
 
@@ -44,7 +58,8 @@ src/repos/user.ts (database access, 80 lines)
 ## Step 3: Diff Detection
 
 1. If previous codemaps exist, calculate the diff percentage
-2. If changes > 30%, show the diff and request user approval before overwriting
+   - "diff percentage" = (files added + removed + modified) ÷ total source files scanned × 100
+2. If changes > 30% (i.e. more than 30% of scanned source files have changed since the last codemap update), show the diff and request user approval before overwriting
 3. If changes <= 30%, update in place
 
 ## Step 4: Add Metadata

@@ -39,6 +39,16 @@ If the project has no `.claude/skills/` directory, only global skills and comman
 
 **Results cache:** `~/.claude/skills/skill-stocktake/results.json`
 
+## Scripts
+
+The three helper scripts are bundled at `skills/skill-stocktake/scripts/` in the ECC repo and are installed to `~/.claude/skills/skill-stocktake/scripts/` as part of a full ECC install:
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/scan.sh` | Enumerate skill files, extract frontmatter, collect mtimes |
+| `scripts/quick-diff.sh` | Return files changed since the last results.json run |
+| `scripts/save-results.sh` | Persist evaluation results to results.json |
+
 ## Quick Scan Flow
 
 Re-evaluate only skills that have changed since the last run (5–10 min).
