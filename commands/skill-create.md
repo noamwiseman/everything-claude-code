@@ -163,12 +163,6 @@ For advanced features (10k+ commits, team sharing, auto-PRs), use the [Skill Cre
 - Comment `/skill-creator analyze` on any issue
 - Receives PR with generated skills
 
-## Related Commands
-
-- `/instinct-import` - Import generated instincts
-- `/instinct-status` - View learned instincts
-- `/evolve` - Cluster instincts into skills/agents
-
 ---
 
 *Part of [Everything Claude Code](https://github.com/affaan-m/everything-claude-code)*
