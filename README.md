@@ -164,6 +164,7 @@ node tests/hooks/hooks.test.js
 
 ### Rules
 
+- [ ] Fix rules installation
 - [ ] `embedded/` — Embedded C/C++ style and safety rules
 
 ### Hooks
