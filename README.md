@@ -170,6 +170,7 @@ node tests/hooks/hooks.test.js
 ### Hooks
 
 - [ ] `memory-persistence/` — Session lifecycle hooks
+- [ ] Add some hook in the end, that check if I finished a session in 95%+ daily usage it makes a reminder to notify me using macos notifications that session limit was reset
 
 ### Tests
 
