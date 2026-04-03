@@ -150,12 +150,8 @@ node tests/hooks/hooks.test.js
 
 ### Commands (Missing)
 
-- [ ] `/security-scan` — Run full security audit (agent exists, command missing)
-- [ ] `/e2e` — Generate and run end-to-end tests
 - [ ] `/debug` — Structured debugging workflow: reproduce, isolate, fix, verify
-- [ ] `/perf-review` — Performance review: hot paths, allocations, algorithmic complexity
-- [ ] `/migrate` — Database migration generation and validation
-- [ ] `/dep-audit` — Dependency audit: outdated, vulnerable, unused packages
+- [ ] `/perf-review` — Performance review: hot paths, allocations, stack usage
 - [ ] `/changelog` — Generate changelog from conventional commits
 
 ### Agents (Missing)
@@ -163,8 +159,6 @@ node tests/hooks/hooks.test.js
 - [ ] `embedded-reviewer.md` — Embedded C/C++ review (MISRA, memory safety, hardware boundaries)
 - [ ] `embedded-build-resolver.md` — Cross-compile and linker error resolution
 - [ ] `rtos-reviewer.md` — RTOS task/ISR/scheduling review (FreeRTOS, Zephyr)
-- [ ] `perf-reviewer.md` — Performance and algorithmic complexity review
-- [ ] `debugger.md` — Structured root-cause analysis agent
 
 ### Skills (Missing)
 
