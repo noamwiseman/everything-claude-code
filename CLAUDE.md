@@ -12,7 +12,7 @@ node tests/lib/utils.test.js             # individual file
 ## Architecture
 
 ```
-agents/      Specialized subagents (planner, code-reviewer, tdd-guide, etc.)
+agents/      Specialized subagents (code-reviewer, tdd-guide, embedded evaluators, etc.)
 commands/    Slash commands users invoke directly
 skills/      Domain knowledge and workflow definitions
 rules/       Always-on guidelines (common, cpp, python, rust)
@@ -25,10 +25,6 @@ schemas/     JSON schemas for config validation
 ```
 
 ## Key Commands
-
-### Planning & Architecture
-- `/plan` — Restate requirements, assess risks, create step-by-step plan. Waits for confirmation before touching code.
-- `/aside` — Answer a side question without losing context on the current task.
 
 ### Code Quality
 - `/code-review` — Security and quality review of uncommitted changes.
@@ -50,7 +46,6 @@ schemas/     JSON schemas for config validation
 
 ### Knowledge & Learning
 - `/learn` — Extract reusable patterns from the current session and save as skills.
-- `/skill-create` — Generate skills from local git history.
 - `/docs` — Look up current library documentation via Context7.
 - `/rules-distill` — Scan skills for cross-cutting principles and distill into rule files.
 
@@ -64,7 +59,6 @@ Agents are invoked by commands or directly by Claude. Each is a markdown file wi
 
 | Agent | Purpose |
 |-------|---------|
-| `planner` | Implementation planning and risk assessment |
 | `architect` | System architecture design |
 | `tdd-guide` | Test-driven development enforcement |
 | `code-reviewer` | Security and quality review |
@@ -78,6 +72,8 @@ Agents are invoked by commands or directly by Claude. Each is a markdown file wi
 | `rust-build-resolver` | Rust build and dependency resolution |
 | `python-reviewer` | PEP 8, type hints, Pythonic patterns |
 | `build-error-resolver` | General build and cross-compilation error resolution |
+| `embedded-docs-coverage` | Probes Context7 to map embedded SW library documentation coverage and gaps |
+| `embedded-prompt-fit` | Evaluates how well prompt-optimize serves embedded SW engineering tasks |
 
 ## Rules
 
