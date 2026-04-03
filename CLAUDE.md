@@ -1,72 +1,108 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Project Overview
-
-This is a **Claude Code plugin** - a collection of production-ready agents, skills, hooks, commands, rules, and MCP configurations. The project provides battle-tested workflows for software development using Claude Code.
+Ultra-refined Claude Code plugin. Production-grade agents, skills, commands, rules, and hooks for software development.
 
 ## Running Tests
 
 ```bash
-# Run all tests
-node tests/run-all.js
-
-# Run individual test files
-node tests/lib/utils.test.js
-node tests/lib/package-manager.test.js
-node tests/hooks/hooks.test.js
+node tests/run-all.js                    # full suite
+node tests/lib/utils.test.js             # individual file
 ```
 
 ## Architecture
 
-The project is organized into several core components:
-
-- **agents/** - Specialized subagents for delegation (planner, code-reviewer, tdd-guide, etc.)
-- **skills/** - Workflow definitions and domain knowledge (coding standards, patterns, testing)
-- **commands/** - Slash commands invoked by users (/tdd, /plan, /e2e, etc.)
-- **hooks/** - Trigger-based automations (session persistence, pre/post-tool hooks)
-- **rules/** - Always-follow guidelines (security, coding style, testing requirements)
-- **mcp-configs/** - MCP server configurations for external integrations
-- **scripts/** - Cross-platform Node.js utilities for hooks and setup
-- **tests/** - Test suite for scripts and utilities
+```
+agents/      Specialized subagents (planner, code-reviewer, tdd-guide, etc.)
+commands/    Slash commands users invoke directly
+skills/      Domain knowledge and workflow definitions
+rules/       Always-on guidelines (common, cpp, python, rust)
+hooks/       Trigger-based automations (pre/post tool hooks)
+scripts/     Node.js utilities powering hooks, install, and CI
+tests/       Test suite mirroring scripts/ structure
+mcp-configs/ MCP server configurations
+manifests/   Install profiles and component definitions
+schemas/     JSON schemas for config validation
+```
 
 ## Key Commands
 
-- `/tdd` - Test-driven development workflow
-- `/plan` - Implementation planning
-- `/e2e` - Generate and run E2E tests
-- `/code-review` - Quality review
-- `/build-fix` - Fix build errors
-- `/learn` - Extract patterns from sessions
-- `/skill-create` - Generate skills from git history
+### Planning & Architecture
+- `/plan` — Restate requirements, assess risks, create step-by-step plan. Waits for confirmation before touching code.
+- `/aside` — Answer a side question without losing context on the current task.
+
+### Code Quality
+- `/code-review` — Security and quality review of uncommitted changes.
+- `/refactor-clean` — Find and remove dead code with test verification at every step.
+- `/quality-gate` — Run the full ECC quality pipeline on a file or project.
+- `/verify` — Comprehensive verification of current codebase state.
+
+### Testing
+- `/tdd` — Test-driven development: scaffold interfaces, write tests first, implement to pass. Targets 80%+ coverage.
+- `/test-coverage` — Analyze coverage gaps and generate missing tests.
+
+### Build & Fix
+- `/build-fix` — Incrementally fix build and type errors with minimal changes.
+
+### Language-Specific
+- `/cpp-review`, `/cpp-build`, `/cpp-test` — C++ review, build fix, and TDD.
+- `/rust-review`, `/rust-build`, `/rust-test` — Rust review, build fix, and TDD.
+- `/python-review` — Python review (PEP 8, type hints, security, idioms).
+
+### Knowledge & Learning
+- `/learn` — Extract reusable patterns from the current session and save as skills.
+- `/skill-create` — Generate skills from local git history.
+- `/docs` — Look up current library documentation via Context7.
+- `/rules-distill` — Scan skills for cross-cutting principles and distill into rule files.
+
+### Optimization
+- `/context-budget` — Analyze context window usage across agents, skills, MCP servers, and rules.
+- `/prompt-optimize` — Analyze and optimize a draft prompt (advisory only, does not execute).
+
+## Agents
+
+Agents are invoked by commands or directly by Claude. Each is a markdown file with YAML frontmatter.
+
+| Agent | Purpose |
+|-------|---------|
+| `planner` | Implementation planning and risk assessment |
+| `architect` | System architecture design |
+| `tdd-guide` | Test-driven development enforcement |
+| `code-reviewer` | Security and quality review |
+| `security-reviewer` | Vulnerability detection |
+| `refactor-cleaner` | Dead code removal |
+| `doc-updater` | Documentation sync |
+| `docs-lookup` | External documentation retrieval |
+| `cpp-reviewer` | C++ memory safety, modern idioms, concurrency |
+| `cpp-build-resolver` | C++ build and linker error resolution |
+| `rust-reviewer` | Ownership, lifetimes, unsafe, idiomatic Rust |
+| `rust-build-resolver` | Rust build and dependency resolution |
+| `python-reviewer` | PEP 8, type hints, Pythonic patterns |
+| `build-error-resolver` | General build error resolution |
+
+## Rules
+
+Rules are always-on guidelines loaded automatically. Organized by language:
+
+- **common/** — Cross-language: coding style, security, testing, git workflow, performance, patterns, code review, hooks, agents, development workflow.
+- **cpp/** — C++ coding style, security, testing, patterns, hooks.
+- **python/** — Python coding style, security, testing, patterns, hooks.
+- **rust/** — Rust coding style, security, testing, patterns, hooks.
 
 ## Development Notes
 
-- Package manager detection: npm, pnpm, yarn, bun (configurable via `CLAUDE_PACKAGE_MANAGER` env var or project config)
-- Cross-platform: Windows, macOS, Linux support via Node.js scripts
-- Agent format: Markdown with YAML frontmatter (name, description, tools, model)
-- Skill format: Markdown with clear sections for when to use, how it works, examples
-- Skill placement: Curated in skills/; generated/imported under ~/.claude/skills/. See docs/SKILL-PLACEMENT-POLICY.md
-- Hook format: JSON with matcher conditions and command/notification hooks
+- CommonJS only (no ESM unless `.mjs`). Plain `.js`, no TypeScript.
+- File naming: lowercase with hyphens (`python-reviewer.md`, `tdd-workflow.md`).
+- Hook scripts: exit 0 on non-critical errors, never block tool execution.
+- Blocking hooks must stay fast (<200ms, no network calls).
+- New scripts in `scripts/lib/` require a matching test in `tests/lib/`.
+- New hooks require at least one integration test in `tests/hooks/`.
+- Run `node tests/run-all.js` before committing.
+- Conventional commits: `fix:`, `feat:`, `test:`, `docs:`, `chore:`.
 
 ## Contributing
 
-Follow the formats in CONTRIBUTING.md:
-- Agents: Markdown with frontmatter (name, description, tools, model)
-- Skills: Clear sections (When to Use, How It Works, Examples)
-- Commands: Markdown with description frontmatter
-- Hooks: JSON with matcher and hooks array
-
-File naming: lowercase with hyphens (e.g., `python-reviewer.md`, `tdd-workflow.md`)
-
-## Skills
-
-Use the following skills when working on related files:
-
-| File(s) | Skill |
-|---------|-------|
-| `README.md` | `/readme` |
-| `.github/workflows/*.yml` | `/ci-workflow` |
-
-When spawning subagents, always pass conventions from the respective skill into the agent's prompt.
+- **Agents**: Markdown with YAML frontmatter (`name`, `description`, `tools`, `model`).
+- **Skills**: Sections: When to Use, How It Works, Examples.
+- **Commands**: Markdown with `description:` frontmatter.
+- **Hooks**: JSON with matcher and hooks array.
+- **Rules**: Markdown, placed in the appropriate language directory.

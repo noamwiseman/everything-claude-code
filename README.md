@@ -148,30 +148,41 @@ node tests/hooks/hooks.test.js
 
 ## TODO
 
-### Agents
+### Commands (Missing)
+
+- [ ] `/security-scan` — Run full security audit (agent exists, command missing)
+- [ ] `/e2e` — Generate and run end-to-end tests
+- [ ] `/debug` — Structured debugging workflow: reproduce, isolate, fix, verify
+- [ ] `/perf-review` — Performance review: hot paths, allocations, algorithmic complexity
+- [ ] `/migrate` — Database migration generation and validation
+- [ ] `/dep-audit` — Dependency audit: outdated, vulnerable, unused packages
+- [ ] `/changelog` — Generate changelog from conventional commits
+
+### Agents (Missing)
 
 - [ ] `embedded-reviewer.md` — Embedded C/C++ review (MISRA, memory safety, hardware boundaries)
 - [ ] `embedded-build-resolver.md` — Cross-compile and linker error resolution
 - [ ] `rtos-reviewer.md` — RTOS task/ISR/scheduling review (FreeRTOS, Zephyr)
+- [ ] `perf-reviewer.md` — Performance and algorithmic complexity review
+- [ ] `debugger.md` — Structured root-cause analysis agent
 
-### Skills
+### Skills (Missing)
 
 - [ ] `embedded-patterns/` — Bare-metal C patterns, ISRs, memory-mapped registers
 - [ ] `rtos-patterns/` — FreeRTOS/Zephyr task design, queues, semaphores
 - [ ] `embedded-testing/` — Unity/Ceedling TDD for embedded C
 - [ ] `misra-guidelines/` — MISRA-C:2012 rules and static analysis
-- [ ] `coding-standards/` — General language best practices
 
 ### Rules
 
-- [ ] Fix rules installation
+- [ ] Fix rules installation (plugins can't distribute rules automatically)
 - [ ] `embedded/` — Embedded C/C++ style and safety rules
 
 ### Hooks
 
 - [ ] `memory-persistence/` — Session lifecycle hooks
-- [ ] Add some hook in the end, that check if I finished a session in 95%+ daily usage it makes a reminder to notify me using macos notifications that session limit was reset
-- [ ] Add hook that changes commands with rm to use built in trash command
+- [ ] Session usage notification — macOS notification when session limit resets after 95%+ daily usage
+- [ ] Safe delete hook — intercept `rm` commands and route through macOS `trash`
 
 ### Tests
 
