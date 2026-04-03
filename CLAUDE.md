@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Ultra-refined Claude Code plugin. Production-grade agents, skills, commands, rules, and hooks for software development.
+Claude Code plugin for embedded software engineering. Production-grade agents, skills, commands, rules, and hooks tuned for firmware, RTOS, bare-metal, and systems-level C/C++/Rust/Python development.
 
 ## Running Tests
 
@@ -43,9 +43,9 @@ schemas/     JSON schemas for config validation
 ### Build & Fix
 - `/build-fix` — Incrementally fix build and type errors with minimal changes.
 
-### Language-Specific
-- `/cpp-review`, `/cpp-build`, `/cpp-test` — C++ review, build fix, and TDD.
-- `/rust-review`, `/rust-build`, `/rust-test` — Rust review, build fix, and TDD.
+### Embedded & Language-Specific
+- `/cpp-review`, `/cpp-build`, `/cpp-test` — C++ review, build fix, and TDD (memory safety, concurrency, modern idioms).
+- `/rust-review`, `/rust-build`, `/rust-test` — Rust review, build fix, and TDD (ownership, lifetimes, unsafe).
 - `/python-review` — Python review (PEP 8, type hints, security, idioms).
 
 ### Knowledge & Learning
@@ -72,21 +72,21 @@ Agents are invoked by commands or directly by Claude. Each is a markdown file wi
 | `refactor-cleaner` | Dead code removal |
 | `doc-updater` | Documentation sync |
 | `docs-lookup` | External documentation retrieval |
-| `cpp-reviewer` | C++ memory safety, modern idioms, concurrency |
-| `cpp-build-resolver` | C++ build and linker error resolution |
-| `rust-reviewer` | Ownership, lifetimes, unsafe, idiomatic Rust |
+| `cpp-reviewer` | C++ memory safety, modern idioms, concurrency, embedded patterns |
+| `cpp-build-resolver` | C++ build, CMake, and linker error resolution |
+| `rust-reviewer` | Ownership, lifetimes, unsafe, idiomatic embedded Rust |
 | `rust-build-resolver` | Rust build and dependency resolution |
 | `python-reviewer` | PEP 8, type hints, Pythonic patterns |
-| `build-error-resolver` | General build error resolution |
+| `build-error-resolver` | General build and cross-compilation error resolution |
 
 ## Rules
 
 Rules are always-on guidelines loaded automatically. Organized by language:
 
 - **common/** — Cross-language: coding style, security, testing, git workflow, performance, patterns, code review, hooks, agents, development workflow.
-- **cpp/** — C++ coding style, security, testing, patterns, hooks.
+- **cpp/** — C/C++ coding style, memory safety, embedded patterns, security, testing, hooks.
 - **python/** — Python coding style, security, testing, patterns, hooks.
-- **rust/** — Rust coding style, security, testing, patterns, hooks.
+- **rust/** — Rust coding style, ownership patterns, embedded safety, testing, hooks.
 
 ## Development Notes
 
