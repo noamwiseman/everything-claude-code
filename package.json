@@ -1,6 +1,6 @@
 {
-  "name": "ecc-universal",
-  "version": "1.9.0",
+  "name": "claudio",
+  "version": "0.1.1",
   "description": "Complete collection of battle-tested Claude Code configs — agents, skills, hooks, commands, and rules evolved over 10+ months of intensive daily use by an Anthropic hackathon winner",
   "keywords": [
     "claude-code",
@@ -25,17 +25,17 @@
     "slides"
   ],
   "author": {
-    "name": "Affaan Mustafa",
-    "url": "https://x.com/affaanmustafa"
+    "name": "Noam Wiseman",
+    "email": "noamwiseman@proton.me"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/affaan-m/everything-claude-code.git"
+    "url": "git+https://github.com/noamwiseman/claudio.git"
   },
-  "homepage": "https://github.com/affaan-m/everything-claude-code#readme",
+  "homepage": "https://github.com/noamwiseman/claudio",
   "bugs": {
-    "url": "https://github.com/affaan-m/everything-claude-code/issues"
+    "url": "https://github.com/noamwiseman/claudio/issues"
   },
   "files": [
     ".agents/",
