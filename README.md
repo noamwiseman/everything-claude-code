@@ -165,14 +165,13 @@ node tests/hooks/hooks.test.js
 
 ### Agents (Missing)
 
-- [ ] `embedded-reviewer.md` — Embedded C/C++ review (MISRA, memory safety, hardware boundaries)
+- [x] `embedded-reviewer.md` — Embedded C/C++ and RTOS review (memory safety, ISR correctness, FreeRTOS patterns, hardware interaction)
 - [ ] `embedded-build-resolver.md` — Cross-compile and linker error resolution
-- [ ] `rtos-reviewer.md` — RTOS task/ISR/scheduling review (FreeRTOS, Zephyr)
 
 ### Skills (Missing)
 
-- [ ] `embedded-patterns/` — Bare-metal C patterns, ISRs, memory-mapped registers
-- [ ] `rtos-patterns/` — FreeRTOS/Zephyr task design, queues, semaphores
+- [x] `embedded-rtos-patterns/` — Bare-metal C patterns, ISRs, memory-mapped registers, FreeRTOS/Zephyr task design, queues, semaphores
+
 - [ ] `embedded-testing/` — Unity/Ceedling TDD for embedded C
 - [ ] `misra-guidelines/` — MISRA-C:2012 rules and static analysis
 

@@ -63,6 +63,7 @@ Agents are invoked by commands or directly by Claude. Each is a markdown file wi
 | `security-reviewer` | Vulnerability detection |
 | `refactor-cleaner` | Dead code removal |
 | `doc-updater` | Documentation sync |
+| `embedded-reviewer` | Embedded C/C++ and RTOS review (memory safety, ISR correctness, FreeRTOS patterns) |
 | `docs-lookup` | External documentation retrieval |
 | `cpp-reviewer` | C++ memory safety, modern idioms, concurrency, embedded patterns |
 | `cpp-build-resolver` | C++ build, CMake, and linker error resolution |
