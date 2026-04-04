@@ -17,11 +17,9 @@ commands/    Slash commands users invoke directly
 skills/      Domain knowledge and workflow definitions
 rules/       Always-on guidelines (common, cpp, python, rust)
 hooks/       Trigger-based automations (pre/post tool hooks)
-scripts/     Node.js utilities powering hooks, install, and CI
+scripts/     Node.js utilities powering hooks and CI
 tests/       Test suite mirroring scripts/ structure
 mcp-configs/ MCP server configurations
-manifests/   Install profiles and component definitions
-schemas/     JSON schemas for config validation
 ```
 
 ## Key Commands
