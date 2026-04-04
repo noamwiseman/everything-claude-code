@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"pre:governance-capture\" \"scripts/hooks/governance-capture.js\" \"standard,strict\"",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-node.sh\" \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"pre:governance-capture\" \"scripts/hooks/governance-capture.js\" \"standard,strict\"",
             "timeout": 10
           }
         ],
@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"post:governance-capture\" \"scripts/hooks/governance-capture.js\" \"standard,strict\"",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-node.sh\" \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"post:governance-capture\" \"scripts/hooks/governance-capture.js\" \"standard,strict\"",
             "timeout": 10
           }
         ],

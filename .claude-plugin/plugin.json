@@ -1,6 +1,6 @@
 {
   "name": "claudio",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Production-ready agents, skills, hooks, and rules for embedded software engineers using Claude Code. Tuned for firmware, RTOS, bare-metal, and systems-level C/C++/Rust/Python development.",
   "author": {
     "name": "Noam Wiseman",
