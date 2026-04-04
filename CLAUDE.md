@@ -5,8 +5,8 @@ Claude Code plugin for embedded software engineering. Production-grade agents, s
 ## Running Tests
 
 ```bash
-node tests/run-all.js                    # full suite
-node tests/lib/utils.test.js             # individual file
+mise exec -- node tests/run-all.js       # full suite
+mise exec -- node tests/lib/utils.test.js  # individual file
 ```
 
 ## Architecture
