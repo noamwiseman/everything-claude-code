@@ -93,6 +93,15 @@ Copy whole language directories (e.g. `rules/common`, `rules/cpp`), not individu
 ---
 
 
+## Prerequisites
+
+- **Node.js >= 18** — required for hooks and test runner. Install locally via [mise](https://mise.jdx.dev/):
+  ```bash
+  mise use node@22
+  ```
+
+---
+
 ## Requirements
 
 ### Claude Code CLI Version
@@ -177,10 +186,6 @@ node tests/hooks/hooks.test.js
 - [ ] `memory-persistence/` — Session lifecycle hooks
 - [ ] Session usage notification — macOS notification when session limit resets after 95%+ daily usage
 - [ ] Safe delete hook — intercept `rm` commands and route through macOS `trash`
-
-### Tests
-
-- [ ] Fix existing test suite (`node tests/run-all.js`)
 
 ### Other
 

@@ -95,3 +95,6 @@ ecc2/target/
 .opencode/node_modules/
 assets/images/security/badrudi-exploit.mp4
 ACTIVE_TASK.md
+
+# Local toolchain config
+mise.toml
