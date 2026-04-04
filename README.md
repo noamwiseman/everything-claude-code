@@ -1,4 +1,4 @@
-# Embedded Claude Code — Base Toolkit
+# Claudio — Embedded Claude Code Toolkit
 
 ![C](https://img.shields.io/badge/-C-A8B9CC?logo=c&logoColor=white)
 ![C++](https://img.shields.io/badge/-C++-00599C?logo=cplusplus&logoColor=white)
@@ -23,7 +23,7 @@ Works with **Claude Code**.
 
 ```bash
 # Add marketplace
-/plugin marketplace add noamwiseman/everything-claude-code
+/plugin marketplace add noamwiseman/claudio
 
 # Install plugin
 /plugin install everything-claude-code@everything-claude-code
@@ -37,7 +37,7 @@ Or add directly to your `~/.claude/settings.json`:
     "everything-claude-code": {
       "source": {
         "source": "github",
-        "repo": "noamwiseman/everything-claude-code"
+        "repo": "noamwiseman/claudio"
       }
     }
   },
@@ -52,16 +52,16 @@ Or add directly to your `~/.claude/settings.json`:
 > **Important:** Claude Code plugins cannot distribute `rules` automatically. Install them manually:
 
 ```bash
-git clone https://github.com/noamwiseman/everything-claude-code.git
+git clone https://github.com/noamwiseman/claudio.git
 
 # User-level rules (applies to all projects)
 mkdir -p ~/.claude/rules
-cp -r everything-claude-code/rules/common ~/.claude/rules/
-cp -r everything-claude-code/rules/cpp ~/.claude/rules/      # pick your stack
+cp -r claudio/rules/common ~/.claude/rules/
+cp -r claudio/rules/cpp ~/.claude/rules/      # pick your stack
 
 # Or project-level rules (applies to current project only)
 mkdir -p .claude/rules
-cp -r everything-claude-code/rules/common .claude/rules/
+cp -r claudio/rules/common .claude/rules/
 ```
 
 Copy whole language directories (e.g. `rules/common`, `rules/cpp`), not individual files, so relative references keep working.
