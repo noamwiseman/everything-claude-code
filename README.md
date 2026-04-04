@@ -179,6 +179,7 @@ node tests/hooks/hooks.test.js
 
 - [ ] Fix rules installation (plugins can't distribute rules automatically)
 - [ ] `embedded/` — Embedded C/C++ style and safety rules
+- [ ] `common/safe-delete.md` — Rule instructing agents to use macOS `trash` utility instead of `rm` to move files to Trash rather than permanently deleting them
 
 ### Hooks
 
