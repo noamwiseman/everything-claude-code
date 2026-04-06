@@ -293,10 +293,12 @@ def run_command(cmd: str, options: Optional[dict] = None) -> dict:
 
     Args:
         cmd: Command to execute (should be trusted/hardcoded)
-        options: Additional options passed to subprocess.run
+        options: Additional options passed to subprocess.run (unused, kept for API compatibility)
     Returns:
         Dict with 'success' (bool) and 'output' (str) keys
     """
+    import shlex as _shlex
+
     allowed_prefixes = ["git ", "node ", "npx ", "which ", "where ", "python ", "uv "]
     if not any(cmd.startswith(prefix) for prefix in allowed_prefixes):
         return {"success": False, "output": "run_command blocked: unrecognized command prefix"}
@@ -308,9 +310,10 @@ def run_command(cmd: str, options: Optional[dict] = None) -> dict:
         return {"success": False, "output": "run_command blocked: shell metacharacters not allowed"}
 
     try:
+        argv = _shlex.split(cmd)
         result = subprocess.run(
-            cmd,
-            shell=True,  # noqa: S602
+            argv,
+            shell=False,
             capture_output=True,
             text=True,
         )

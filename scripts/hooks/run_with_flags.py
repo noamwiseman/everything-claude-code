@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 
 MAX_STDIN = 1024 * 1024
+STDIN_CHUNK_SIZE = 65536
 
 # Insert lib directory into path for hook_flags import
 _SCRIPT_DIR = Path(__file__).parent
@@ -37,7 +38,7 @@ def _read_stdin_raw() -> tuple:
     truncated = False
 
     while True:
-        chunk = sys.stdin.read(65536)
+        chunk = sys.stdin.read(STDIN_CHUNK_SIZE)
         if not chunk:
             break
         if total_size < MAX_STDIN:
@@ -111,8 +112,10 @@ def main() -> None:
     resolved_root = str(Path(plugin_root).resolve())
     script_path = str(Path(plugin_root, rel_script_path).resolve())
 
-    # Prevent path traversal outside the plugin root
-    if not script_path.startswith(resolved_root + os.sep):
+    # Prevent path traversal outside the plugin root (Python 3.9+ is_relative_to)
+    try:
+        Path(script_path).relative_to(resolved_root)
+    except ValueError:
         sys.stderr.write(f"[Hook] Path traversal rejected for {hook_id}: {script_path}\n")
         sys.stdout.write(raw)
         sys.exit(0)

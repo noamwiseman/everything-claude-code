@@ -103,7 +103,7 @@ def run_tests() -> None:
         claude_dir = utils.get_claude_dir()
         home_dir = utils.get_home_dir()
         assert claude_dir.startswith(home_dir)
-        assert ".claude" in claude_dir
+        assert Path(claude_dir).name == ".claude", f"Expected .claude dir, got {Path(claude_dir).name}"
 
     if test("get_claude_dir returns path under home", t_claude_dir):
         passed += 1
@@ -114,7 +114,7 @@ def run_tests() -> None:
         sessions_dir = utils.get_sessions_dir()
         claude_dir = utils.get_claude_dir()
         assert sessions_dir.startswith(claude_dir)
-        assert sessions_dir.endswith(os.path.join(".claude", "session-data")) or sessions_dir.endswith("/.claude/session-data")
+        assert Path(sessions_dir).name == "session-data"
 
     if test("get_sessions_dir returns path under Claude dir", t_sessions_dir):
         passed += 1
@@ -772,9 +772,10 @@ def run_tests() -> None:
 
     def t_learned_skills():
         d = utils.get_learned_skills_dir()
-        assert ".claude" in d
-        assert "skills" in d
-        assert "learned" in d
+        p = Path(d)
+        assert p.name == "learned"
+        assert p.parent.name == "skills"
+        assert p.parent.parent.name == ".claude"
 
     if test("get_learned_skills_dir returns path under Claude dir", t_learned_skills):
         passed += 1

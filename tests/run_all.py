@@ -18,7 +18,9 @@ from pathlib import Path
 
 TESTS_DIR = Path(__file__).parent
 REPO_ROOT = TESTS_DIR.parent
+# Glob pattern used for test discovery
 TEST_GLOB = "tests/**/*_test.py"
+_TEST_GLOB_REGEX = re.compile(r"^tests/(?:.+/)?[^/]+_test\.py$")
 
 BOX_W = 58
 
@@ -29,7 +31,7 @@ def box_line(s: str) -> str:
 
 def matches_test_glob(relative_path: str) -> bool:
     normalized = relative_path.replace(os.sep, "/")
-    return bool(re.match(r"^tests/(?:.+/)?[^/]+_test\.py$", normalized))
+    return bool(_TEST_GLOB_REGEX.match(normalized))
 
 
 def walk_files(directory: Path, acc: list = None) -> list:
@@ -110,7 +112,7 @@ print(box_line("                     Final Results"))
 print("\u2560" + "\u2550" * BOX_W + "\u2563")
 print(box_line(f"  Total Tests: {str(total_tests).rjust(4)}"))
 print(box_line(f"  Passed:      {str(total_passed).rjust(4)}  \u2713"))
-print(box_line(f"  Failed:      {str(total_failed).rjust(4)}  {'✗' if total_failed > 0 else ' '}"))
+print(box_line(f"  Failed:      {str(total_failed).rjust(4)}  {chr(0x2717) if total_failed > 0 else ' '}"))
 print("\u255a" + "\u2550" * BOX_W + "\u255d")
 
 sys.exit(1 if total_failed > 0 else 0)

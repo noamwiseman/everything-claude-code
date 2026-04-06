@@ -28,6 +28,7 @@ import sys
 import time
 
 MAX_STDIN = 1024 * 1024
+STDIN_CHUNK_SIZE = 65536
 
 # Patterns that indicate potential hardcoded secrets
 SECRET_PATTERNS = [
@@ -308,7 +309,7 @@ if __name__ == "__main__":
     _truncated = os.environ.get("ECC_HOOK_INPUT_TRUNCATED", "").lower() in ("1", "true", "yes")
 
     while True:
-        _chunk = sys.stdin.read(65536)
+        _chunk = sys.stdin.read(STDIN_CHUNK_SIZE)
         if not _chunk:
             break
         if _total_size < MAX_STDIN:
