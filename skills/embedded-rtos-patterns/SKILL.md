@@ -1,11 +1,11 @@
 ---
 name: embedded-rtos-patterns
-description: Bare-metal C patterns, ISR design, memory-mapped registers, FreeRTOS/Zephyr task architecture, queues, semaphores, and timing. Use when writing, reviewing, or designing embedded firmware and RTOS applications.
+description: Bare-metal C patterns, ISR design, memory-mapped registers, FreeRTOS/Zephyr task architecture, queues, semaphores, timing, multicore SMP, power management, telemetry, and off-target testing. Use when writing, reviewing, or designing embedded firmware and RTOS applications.
 ---
 
 # Embedded & RTOS Patterns
 
-Patterns and best practices for bare-metal C, interrupt-driven firmware, and RTOS-based embedded systems (FreeRTOS, Zephyr). Covers memory allocation, ISR design, task architecture, synchronization, hardware interaction, and deterministic timing.
+Patterns and best practices for bare-metal C, interrupt-driven firmware, and RTOS-based embedded systems (FreeRTOS, Zephyr). Covers architectural decoupling, memory allocation, hardware-enforced safety, multicore SMP, ISR design, task architecture, synchronization, hardware interaction, state machines, deterministic timing, power management, watchdog supervision, and crash telemetry.
 
 ## When to Use
 
@@ -15,6 +15,10 @@ Patterns and best practices for bare-metal C, interrupt-driven firmware, and RTO
 - Working with memory-mapped registers and peripherals
 - Debugging timing, starvation, or priority inversion issues
 - Structuring producer-consumer or sensor-processing pipelines
+- Designing multicore (SMP) firmware on dual-core MCUs (e.g., RP2040)
+- Implementing low-power modes and tickless idle
+- Designing watchdog supervision and crash persistence strategies
+- Planning off-target testing and architectural decoupling
 
 ### When NOT to Use
 
@@ -23,15 +27,112 @@ Patterns and best practices for bare-metal C, interrupt-driven firmware, and RTO
 
 ## How It Works
 
-This skill provides concrete patterns organized by domain: static memory, ISR design, RTOS task architecture, synchronization primitives, hardware register access, state machines, and timing. Each pattern includes a rationale, a BAD/GOOD code example, and guidance on when to apply it.
+This skill provides concrete patterns organized by domain: architectural decoupling, static memory, hardware-enforced safety, multicore SMP, ISR design, RTOS task architecture, synchronization primitives, hardware register access, state machines, timing, DMA, power management, watchdog supervision, telemetry, and defensive programming. Each pattern includes a rationale, a BAD/GOOD code example, and guidance on when to apply it.
 
 ---
 
-## 1. Static Memory Allocation
+## 1. Architectural Decoupling & Off-Target Testing
 
-All memory must be statically allocated at compile time. Dynamic allocation (`malloc`, `free`, `new`, `delete`, `pvPortMalloc`, `vPortFree`) causes fragmentation and non-deterministic behavior and introduces instability in embedded systems.
+Decouple application logic from hardware and RTOS to enable portable, testable firmware.
 
-### Static Buffers
+### OS Abstraction Layer (OSAL)
+
+Prevent vendor lock-in and enable hardware-agnostic host-side simulation by abstracting RTOS APIs behind a portable interface (e.g., CMSIS-RTOSv2).
+
+```c
+// BAD: Direct FreeRTOS calls scattered through application code
+void vAppTask(void *pvParameters) {
+    xSemaphoreTake(xMutex, portMAX_DELAY);
+    // ... application logic ...
+    xSemaphoreGive(xMutex);
+}
+
+// GOOD: OSAL abstraction -- swap RTOS without touching app code
+#include "osal.h"
+
+void vAppTask(void *pvParameters) {
+    osal_mutex_lock(&app_mutex, OSAL_WAIT_FOREVER);
+    // ... application logic ...
+    osal_mutex_unlock(&app_mutex);
+}
+```
+
+### Configuration Tables
+
+Centralize peripheral initialization parameters into `static const` ROM tables to make hardware drivers highly reusable and decoupled from specific application implementations.
+
+```c
+// BAD: Hard-coded peripheral setup mixed into driver logic
+void uart_init(void) {
+    USART1->BRR = 0x0683;  // Magic baud rate
+    USART1->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+}
+
+// GOOD: Configuration table -- driver is reusable across products
+typedef struct {
+    USART_TypeDef *periph;
+    uint32_t       baud;
+    uint32_t       flags;
+} UartConfig_t;
+
+static const UartConfig_t uart_configs[] = {
+    { USART1, 115200, USART_CR1_TE | USART_CR1_RE | USART_CR1_UE },
+    { USART2,   9600, USART_CR1_TE | USART_CR1_RE | USART_CR1_UE },
+};
+
+void uart_init(const UartConfig_t *cfg) {
+    cfg->periph->BRR = compute_brr(cfg->baud);
+    cfg->periph->CR1 = cfg->flags;
+}
+```
+
+### Data Encapsulation (Opaque Pointer Pattern)
+
+Use the Opaque Pointer pattern in C to hide struct memory layouts from client code, enforcing state protection without the overhead of C++.
+
+```c
+// sensor.h -- public API, struct internals hidden
+typedef struct Sensor Sensor_t;  // Opaque forward declaration
+
+Sensor_t *sensor_create(uint8_t channel);
+int32_t   sensor_read(const Sensor_t *self);
+void      sensor_destroy(Sensor_t *self);
+
+// sensor.c -- private implementation
+struct Sensor {
+    uint8_t  channel;
+    int32_t  last_reading;
+    uint32_t calibration;
+};
+```
+
+### Test-Driven Development (Off-Target)
+
+Compile and verify logic off-target on a host PC using mocking frameworks (CMock, Unity, fff) to achieve full execution path coverage without the bottleneck of physical hardware.
+
+```c
+// test_sensor_filter.c -- runs on host PC, no hardware needed
+#include "unity.h"
+#include "mock_adc_driver.h"  // CMock-generated mock
+#include "sensor_filter.h"
+
+void test_moving_average_filters_noise(void) {
+    adc_read_raw_ExpectAndReturn(1024);
+    adc_read_raw_ExpectAndReturn(1028);
+    adc_read_raw_ExpectAndReturn(1020);
+
+    int32_t avg = sensor_filter_update();
+    TEST_ASSERT_INT32_WITHIN(2, 1024, avg);
+}
+```
+
+---
+
+## 2. Memory Management & Hardware-Enforced Safety
+
+### Static Memory Allocation
+
+All memory must be statically allocated at compile time. Dynamic allocation (`malloc`, `free`, `new`, `delete`, `pvPortMalloc`, `vPortFree`) causes fragmentation and non-deterministic behavior.
 
 ```c
 // BAD: Dynamic allocation at runtime
@@ -46,7 +147,6 @@ static uint8_t rx_buffer[512];
 static uint8_t tx_buffer[256];
 
 void vTask(void *pvParameters) {
-    // Use static buffers directly
     memset(rx_buffer, 0, sizeof(rx_buffer));
 }
 ```
@@ -69,6 +169,33 @@ void vCreateInfrastructure(void) {
 }
 ```
 
+### Hardware Stack Protection
+
+Software watermarks (`uxTaskGetStackHighWaterMark`) are insufficient for safety-critical systems. Use the Memory Protection Unit (MPU) or ARM stack limit registers (e.g., `PSPLIM`) to enforce strict mathematical boundaries that trigger instantaneous hardware faults on stack overflow.
+
+```c
+// INSUFFICIENT: Software watermark -- detects overflow after the fact
+#if configCHECK_FOR_STACK_OVERFLOW
+UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
+configASSERT(hwm > 32);
+#endif
+
+// BETTER: MPU-enforced stack guard region -- hardware fault on overflow
+// FreeRTOS v10.6+ with configENABLE_MPU = 1
+// The kernel automatically configures MPU regions around task stacks
+// when using xTaskCreateRestricted() or xTaskCreateRestrictedStatic()
+static const TaskParameters_t xWorkerParams = {
+    .pvTaskCode    = vWorkerTask,
+    .pcName        = "Worker",
+    .usStackDepth  = WORKER_STACK_SIZE,
+    .uxPriority    = WORKER_PRIORITY | portPRIVILEGE_BIT,
+    .puxStackBuffer = xWorkerStack,
+    // MPU regions configured automatically for stack guard
+};
+
+xTaskCreateRestricted(&xWorkerParams, &xWorkerHandle);
+```
+
 ### Stack Discipline
 
 Keep local variables small. Large arrays on the stack risk overflow in tasks with limited stack space.
@@ -89,87 +216,147 @@ void vProcessTask(void *pvParameters) {
 }
 ```
 
----
+### Struct Padding Minimization
 
-## 2. ISR Design Patterns
-
-ISRs must be short, non-blocking, and defer all heavy work to tasks. The ISR captures the event and hands it off.
-
-### Deferred Processing (ISR-to-Task Handoff)
+Order struct members strictly by size (largest to smallest) to minimize padding waste during queue copies or DMA transfers.
 
 ```c
-static TaskHandle_t xProcessingTask = NULL;
+// BAD: Compiler inserts 7 bytes of padding (24 bytes total on 32-bit)
+typedef struct {
+    uint8_t  status;     // 1 byte + 3 padding
+    uint32_t timestamp;  // 4 bytes
+    uint8_t  channel;    // 1 byte + 3 padding
+    uint32_t value;      // 4 bytes
+} PaddedSample_t;        // 16 bytes with 6 wasted
 
-// ISR: Capture event, notify task, exit fast
-void EXTI0_IRQHandler(void) {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+// GOOD: Ordered by size -- minimal padding (12 bytes, 0 wasted)
+typedef struct {
+    uint32_t timestamp;  // 4 bytes
+    uint32_t value;      // 4 bytes
+    uint8_t  status;     // 1 byte
+    uint8_t  channel;    // 1 byte + 2 padding (end only)
+} PackedSample_t;        // 12 bytes
 
-    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+_Static_assert(sizeof(PackedSample_t) == 12, "unexpected struct padding");
+```
 
-    vTaskNotifyGiveFromISR(xProcessingTask, &xHigherPriorityTaskWoken);
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+---
+
+## 3. Multicore (SMP) Paradigms
+
+For dual-core architectures (like the RP2040), tasks cannot assume single-core preemption rules. SMP-aware scheduling and inter-core communication primitives are required.
+
+### Core Affinity
+
+Pin hardware-dependent tasks to dedicated cores to prevent migration and ensure deterministic peripheral access.
+
+```c
+// GOOD: Pin time-critical sensor task to core 0, comms to core 1
+TaskHandle_t xSensorTask, xCommsTask;
+
+xTaskCreate(vSensorTask, "Sensor", SENSOR_STACK, NULL, 3, &xSensorTask);
+xTaskCreate(vCommsTask,  "Comms",  COMMS_STACK,  NULL, 2, &xCommsTask);
+
+// FreeRTOS SMP API
+vTaskCoreAffinitySet(xSensorTask, (1 << 0));  // Core 0 only
+vTaskCoreAffinitySet(xCommsTask,  (1 << 1));  // Core 1 only
+```
+
+### Inter-Core Communication
+
+Use Stream Buffers and Message Buffers for lock-free, lightweight data transfer across cores instead of relying solely on standard queues (which may require cross-core mutex contention).
+
+```c
+// GOOD: Stream buffer for lock-free cross-core byte stream
+static StreamBufferHandle_t xCrossCoreBuf;
+
+// Core 0: Producer
+void vSensorTask(void *pvParameters) {
+    uint8_t sample[16];
+    while (1) {
+        read_sensor(sample, sizeof(sample));
+        xStreamBufferSend(xCrossCoreBuf, sample, sizeof(sample),
+                          pdMS_TO_TICKS(10));
+    }
 }
 
-// Task: Do the heavy lifting
-void vProcessingTask(void *pvParameters) {
+// Core 1: Consumer
+void vCommsTask(void *pvParameters) {
+    uint8_t rx[16];
     while (1) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // Block until ISR signals
-        perform_expensive_computation();
+        size_t n = xStreamBufferReceive(xCrossCoreBuf, rx, sizeof(rx),
+                                         portMAX_DELAY);
+        if (n > 0) transmit_data(rx, n);
     }
 }
 ```
 
-### ISR Data Handoff via Queue
-
-When the ISR produces data (not just a signal), use a queue:
-
-```c
-static QueueHandle_t xUartQueue;
-
-void USART1_IRQHandler(void) {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    uint8_t byte = USART1->DR;
-
-    xQueueSendFromISR(xUartQueue, &byte, &xHigherPriorityTaskWoken);
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-}
-
-void vUartTask(void *pvParameters) {
-    uint8_t byte;
-    while (1) {
-        if (xQueueReceive(xUartQueue, &byte, portMAX_DELAY) == pdPASS) {
-            process_byte(byte);
-        }
-    }
-}
-```
-
-### ISR API Rules
-
-| Context | Use This | Never This |
-|---------|----------|------------|
-| ISR | `xQueueSendFromISR()` | `xQueueSend()` |
-| ISR | `xSemaphoreGiveFromISR()` | `xSemaphoreGive()` |
-| ISR | `vTaskNotifyGiveFromISR()` | `xTaskNotifyGive()` |
-| ISR | `xTimerStartFromISR()` | `xTimerStart()` |
-| ISR exit | `portYIELD_FROM_ISR()` | (don't omit) |
-
-### ISR Identification
-
-Recognize ISR code by these naming patterns:
-- `*_IRQHandler` (STM32 HAL / CMSIS)
-- `ISR(TIMER1_COMPA_vect)` (AVR)
-- `IRAM_ATTR` functions (ESP-IDF)
-- `__attribute__((interrupt))` annotations
-- Files named `*_it.c`, `*_isr.c`
+> **Note:** Stream/Message Buffers are single-writer, single-reader only. For multi-writer or multi-reader scenarios, use queues with appropriate synchronization.
 
 ---
 
-## 3. RTOS Task Architecture
+## 4. Task Decomposition & Scheduling
 
-### Task Chaining (Priority-Based Pipeline)
+### Rate Monotonic Scheduling (RMS)
 
-Assign strictly descending priorities so each stage completes before the next begins. The higher-priority task **must block** after handing off data.
+Use RMS principles to mathematically verify that all periodic tasks will meet their execution deadlines based on their worst-case execution times and frequencies.
+
+```c
+// RMS schedulability check: sum of (WCET_i / Period_i) <= n * (2^(1/n) - 1)
+// For 3 tasks: utilization bound = 3 * (2^(1/3) - 1) ≈ 0.780
+//
+// Task         WCET    Period    Utilization
+// Sensor       1ms     10ms      0.100
+// Filter       2ms     20ms      0.100
+// Transmit     5ms     50ms      0.100
+// Total:                         0.300 <= 0.780  ✓ Schedulable
+
+// Assign priorities: shorter period = higher priority (RMS rule)
+#define SENSOR_PRIORITY    (tskIDLE_PRIORITY + 3)  // 10ms period
+#define FILTER_PRIORITY    (tskIDLE_PRIORITY + 2)  // 20ms period
+#define TRANSMIT_PRIORITY  (tskIDLE_PRIORITY + 1)  // 50ms period
+```
+
+### Active Object Pattern
+
+Transition from monolithic switch-based FSMs and deadlock-prone mutexes to Active Objects that encapsulate their own threads and communicate exclusively via lock-free, asynchronous message queues.
+
+```c
+// BAD: Shared state protected by mutex -- deadlock-prone
+static Mutex_t gStateMutex;
+static SystemState_t gState;
+
+void vTask1(void *p) {
+    xSemaphoreTake(gStateMutex, portMAX_DELAY);
+    gState = process_event(gState, evt);  // Holding mutex during compute
+    xSemaphoreGive(gStateMutex);
+}
+
+// GOOD: Active Object -- private state, message-driven
+typedef struct {
+    TaskHandle_t  task;
+    QueueHandle_t mailbox;
+    SystemState_t state;  // Private, never shared
+} ActiveObject_t;
+
+static void vActiveObjectRun(void *pvParameters) {
+    ActiveObject_t *ao = (ActiveObject_t *)pvParameters;
+    Event_t evt;
+    while (1) {
+        xQueueReceive(ao->mailbox, &evt, portMAX_DELAY);
+        ao->state = process_event(ao->state, &evt);  // No mutex needed
+    }
+}
+
+// External callers post events, never touch state directly
+void active_object_post(ActiveObject_t *ao, const Event_t *evt) {
+    xQueueSend(ao->mailbox, evt, pdMS_TO_TICKS(10));
+}
+```
+
+### Priority-Based Pipeline (Task Chaining)
+
+Chain chronological tasks with strictly descending priorities to enable sequential data processing without race conditions.
 
 ```c
 // Sensor (highest) -> FFT (middle) -> Output (lowest)
@@ -193,7 +380,7 @@ void vFFTTask(void *pvParameters) {
     SensorData_t sample;
     FFTResult_t result;
     while (1) {
-        xQueueReceive(xRawQueue, &sample, portMAX_DELAY); // Block until data
+        xQueueReceive(xRawQueue, &sample, portMAX_DELAY);
         result = compute_fft(&sample);
         xQueueSend(xResultQueue, &result, portMAX_DELAY);
     }
@@ -242,92 +429,87 @@ xTaskCreate(vWorkerTask, "Worker", 256, NULL, 2, NULL);
 // Stack: 128 baseline + 64 for printf + 64 headroom = 256 words
 #define WORKER_STACK_SIZE  256
 xTaskCreate(vWorkerTask, "Worker", WORKER_STACK_SIZE, NULL, 2, NULL);
-
-// Development: Check high water mark
-void vWorkerTask(void *pvParameters) {
-    while (1) {
-        // ... work ...
-        #if configCHECK_FOR_STACK_OVERFLOW
-        UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
-        configASSERT(hwm > 32); // At least 32 words headroom
-        #endif
-    }
-}
 ```
 
 ---
 
-## 4. Synchronization Primitives
+## 5. ISR Design & Hardware Interaction
 
-### When to Use What
+ISRs must be short, non-blocking, and defer all heavy work to tasks. The ISR captures the event and hands it off.
 
-| Primitive | Use Case | Notes |
-|-----------|----------|-------|
-| **Task Notification** | Unblocking a single known task | Fastest, zero RAM overhead. Replace binary semaphores with these. |
-| **Queue** | Passing data between tasks or ISR-to-task | Copies data. Size queues for worst-case burst. |
-| **Mutex** | Mutual exclusion (shared resource) | Has priority inheritance. Never use in ISRs. |
-| **Binary Semaphore** | ISR-to-task signaling (legacy) | Prefer task notifications instead. No priority inheritance -- never use for mutual exclusion. |
-| **Counting Semaphore** | Resource pools, event counting | When multiple identical resources exist. |
-| **Event Group** | Waiting for multiple conditions | `xEventGroupWaitBits` for AND/OR of flags. |
-| **Stream/Message Buffer** | Variable-length byte/message streams | Single-reader, single-writer only. |
+### Deferred Processing (ISR-to-Task Handoff)
 
-### Task Notifications Over Semaphores
+Keep ISRs absolutely minimal. Clear the hardware flag and immediately hand off processing to an RTOS task using `vTaskNotifyGiveFromISR` or queues.
 
 ```c
-// BAD: Binary semaphore for simple ISR-to-task signaling
-static SemaphoreHandle_t xSemaphore;
+static TaskHandle_t xProcessingTask = NULL;
 
-void ISR_Handler(void) {
-    BaseType_t xWoken = pdFALSE;
-    xSemaphoreGiveFromISR(xSemaphore, &xWoken);
-    portYIELD_FROM_ISR(xWoken);
+// ISR: Capture event, notify task, exit fast
+void EXTI0_IRQHandler(void) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+
+    vTaskNotifyGiveFromISR(xProcessingTask, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-void vTask(void *pvParameters) {
+// Task: Do the heavy lifting
+void vProcessingTask(void *pvParameters) {
     while (1) {
-        xSemaphoreTake(xSemaphore, portMAX_DELAY);
-        do_work();
-    }
-}
-
-// GOOD: Task notification -- faster, no RAM allocation
-void ISR_Handler(void) {
-    BaseType_t xWoken = pdFALSE;
-    vTaskNotifyGiveFromISR(xTaskHandle, &xWoken);
-    portYIELD_FROM_ISR(xWoken);
-}
-
-void vTask(void *pvParameters) {
-    while (1) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        do_work();
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // Block until ISR signals
+        perform_expensive_computation();
     }
 }
 ```
 
-### Mutex for Shared Resources (Not Binary Semaphore)
+### ISR Data Handoff via Queue
+
+When the ISR produces data (not just a signal), use a queue:
 
 ```c
-// BAD: Binary semaphore for mutual exclusion -- no priority inheritance
-static SemaphoreHandle_t xBinSem = xSemaphoreCreateBinary();
+static QueueHandle_t xUartQueue;
 
-// GOOD: Mutex -- supports priority inheritance, prevents priority inversion
-static SemaphoreHandle_t xMutex = xSemaphoreCreateMutex();
+void USART1_IRQHandler(void) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    uint8_t byte = USART1->DR;
 
-void vAccessSharedResource(void) {
-    if (xSemaphoreTake(xMutex, pdMS_TO_TICKS(100)) == pdPASS) {
-        // Critical resource access
-        update_shared_state();
-        xSemaphoreGive(xMutex);
-    } else {
-        handle_timeout();
+    xQueueSendFromISR(xUartQueue, &byte, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+void vUartTask(void *pvParameters) {
+    uint8_t byte;
+    while (1) {
+        if (xQueueReceive(xUartQueue, &byte, portMAX_DELAY) == pdPASS) {
+            process_byte(byte);
+        }
     }
 }
 ```
 
----
+### Mandatory Yielding
 
-## 5. Hardware Register Access
+Always evaluate context switches at the end of an ISR (`portYIELD_FROM_ISR`) to guarantee the immediate execution of any high-priority task unblocked by the interrupt.
+
+### ISR API Rules
+
+| Context | Use This | Never This |
+|---------|----------|------------|
+| ISR | `xQueueSendFromISR()` | `xQueueSend()` |
+| ISR | `xSemaphoreGiveFromISR()` | `xSemaphoreGive()` |
+| ISR | `vTaskNotifyGiveFromISR()` | `xTaskNotifyGive()` |
+| ISR | `xTimerStartFromISR()` | `xTimerStart()` |
+| ISR exit | `portYIELD_FROM_ISR()` | (don't omit) |
+
+### ISR Identification
+
+Recognize ISR code by these naming patterns:
+- `*_IRQHandler` (STM32 HAL / CMSIS)
+- `ISR(TIMER1_COMPA_vect)` (AVR)
+- `IRAM_ATTR` functions (ESP-IDF)
+- `__attribute__((interrupt))` annotations
+- Files named `*_it.c`, `*_isr.c`
 
 ### Volatile for Memory-Mapped Registers
 
@@ -381,11 +563,144 @@ PERIPH->DR = result;
 taskEXIT_CRITICAL();
 ```
 
+### DMA Offloading
+
+Prefer Direct Memory Access (DMA) over CPU-driven loops for all bulk data transfers (SPI, UART, ADC) to maximize CPU availability.
+
+> **Note:** Not all MCUs have DMA controllers, and available DMA channels may be limited. Treat this as a strong recommendation, not a universal rule. Verify DMA availability for your target before refactoring.
+
+#### SPI Transfer
+
+```c
+// BAD: CPU-driven -- blocks task for entire transfer
+void vSendFrame(const uint8_t *buf, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        while (!(SPI1->SR & SPI_SR_TXE)) {}  // Spin per byte
+        SPI1->DR = buf[i];
+    }
+    while (SPI1->SR & SPI_SR_BSY) {}  // Wait for completion
+}
+
+// GOOD: DMA -- CPU is free during transfer, task blocks on notification
+static TaskHandle_t xSpiTaskHandle;
+
+void vSendFrame(const uint8_t *buf, size_t len) {
+    HAL_SPI_Transmit_DMA(&hspi1, buf, len);
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100)); // Block until DMA complete
+}
+
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
+    BaseType_t xWoken = pdFALSE;
+    vTaskNotifyGiveFromISR(xSpiTaskHandle, &xWoken);
+    portYIELD_FROM_ISR(xWoken);
+}
+```
+
+#### ADC Scan Sequence
+
+```c
+// BAD: CPU polls each channel sequentially
+uint16_t adc_values[4];
+for (int ch = 0; ch < 4; ch++) {
+    HAL_ADC_Start(&hadc1);
+    HAL_ADC_PollForConversion(&hadc1, 100);
+    adc_values[ch] = HAL_ADC_GetValue(&hadc1);
+}
+
+// GOOD: DMA fills buffer in hardware, ISR signals task when done
+static uint16_t adc_dma_buffer[4];
+
+void vStartADCScan(void) {
+    HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_dma_buffer, 4);
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
+    BaseType_t xWoken = pdFALSE;
+    vTaskNotifyGiveFromISR(xAdcTaskHandle, &xWoken);
+    portYIELD_FROM_ISR(xWoken);
+}
+```
+
+#### When to Keep CPU-Driven Transfers
+
+- Single-byte control registers or configuration writes (DMA setup overhead not justified)
+- MCUs without a DMA controller (e.g. some Cortex-M0 parts)
+- All DMA channels already allocated to higher-priority peripherals
+
 ---
 
-## 6. State Machines
+## 6. Synchronization Primitives
 
-State machines are the backbone of embedded control logic. They must be explicit, exhaustive, and safe.
+### When to Use What
+
+| Primitive | Use Case | Notes |
+|-----------|----------|-------|
+| **Task Notification** | Unblocking a single known task | Fastest, zero RAM overhead. Replace binary semaphores with these. |
+| **Queue** | Passing data between tasks or ISR-to-task | Copies data. Size queues for worst-case burst. |
+| **Mutex** | Mutual exclusion (shared resource) | Has priority inheritance. Never use in ISRs. |
+| **Binary Semaphore** | ISR-to-task signaling (legacy) | Prefer task notifications instead. No priority inheritance -- never use for mutual exclusion. |
+| **Counting Semaphore** | Resource pools, event counting | When multiple identical resources exist. |
+| **Event Group** | Waiting for multiple conditions | `xEventGroupWaitBits` for AND/OR of flags. |
+| **Stream/Message Buffer** | Variable-length byte/message streams | Single-reader, single-writer only. Ideal for inter-core communication. |
+
+### Task Notifications Over Semaphores
+
+```c
+// BAD: Binary semaphore for simple ISR-to-task signaling
+static SemaphoreHandle_t xSemaphore;
+
+void ISR_Handler(void) {
+    BaseType_t xWoken = pdFALSE;
+    xSemaphoreGiveFromISR(xSemaphore, &xWoken);
+    portYIELD_FROM_ISR(xWoken);
+}
+
+void vTask(void *pvParameters) {
+    while (1) {
+        xSemaphoreTake(xSemaphore, portMAX_DELAY);
+        do_work();
+    }
+}
+
+// GOOD: Task notification -- faster, no RAM allocation
+void ISR_Handler(void) {
+    BaseType_t xWoken = pdFALSE;
+    vTaskNotifyGiveFromISR(xTaskHandle, &xWoken);
+    portYIELD_FROM_ISR(xWoken);
+}
+
+void vTask(void *pvParameters) {
+    while (1) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        do_work();
+    }
+}
+```
+
+### Mutex for Shared Resources (Not Binary Semaphore)
+
+```c
+// BAD: Binary semaphore for mutual exclusion -- no priority inheritance
+static SemaphoreHandle_t xBinSem = xSemaphoreCreateBinary();
+
+// GOOD: Mutex -- supports priority inheritance, prevents priority inversion
+static SemaphoreHandle_t xMutex = xSemaphoreCreateMutex();
+
+void vAccessSharedResource(void) {
+    if (xSemaphoreTake(xMutex, pdMS_TO_TICKS(100)) == pdPASS) {
+        update_shared_state();
+        xSemaphoreGive(xMutex);
+    } else {
+        handle_timeout();
+    }
+}
+```
+
+---
+
+## 7. State Machines
+
+State machines are the backbone of embedded control logic. They must be explicit, exhaustive, and safe. For complex systems, consider the Active Object pattern (Section 4) as an evolution of monolithic FSMs.
 
 ### Explicit State Enum with Default Handler
 
@@ -448,7 +763,7 @@ if (status_reg & ERROR_MASK) {
 
 ---
 
-## 7. Timing and Tick Safety
+## 8. Timing and Tick Safety
 
 ### Tick Overflow-Safe Comparisons
 
@@ -471,7 +786,6 @@ while ((xTaskGetTickCount() - start) < pdMS_TO_TICKS(500)) {
 void vPeriodicTask(void *pvParameters) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     while (1) {
-        // Automatically handles tick overflow
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(PERIOD_MS));
         do_periodic_work();
     }
@@ -498,99 +812,169 @@ while (!(SPI->SR & SPI_SR_TXE)) {
 
 ---
 
-## 8. Struct Layout for Queues and DMA
+## 9. System Reliability & Power Management
 
-Order struct members by size (largest first) to minimize padding. This matters when structs are copied through queues or DMA'd over a bus.
+### Task Watchdog Supervisor
 
-```c
-// BAD: Compiler inserts 7 bytes of padding (24 bytes total on 32-bit)
-typedef struct {
-    uint8_t  status;     // 1 byte + 3 padding
-    uint32_t timestamp;  // 4 bytes
-    uint8_t  channel;    // 1 byte + 3 padding
-    uint32_t value;      // 4 bytes
-} PaddedSample_t;        // 16 bytes with 6 wasted
-
-// GOOD: Ordered by size -- minimal padding (12 bytes, 0 wasted)
-typedef struct {
-    uint32_t timestamp;  // 4 bytes
-    uint32_t value;      // 4 bytes
-    uint8_t  status;     // 1 byte
-    uint8_t  channel;    // 1 byte + 2 padding (end only)
-} PackedSample_t;        // 12 bytes
-
-_Static_assert(sizeof(PackedSample_t) == 12, "unexpected struct padding");
-```
-
----
-
-## 9. DMA Over CPU-Driven Peripheral Access
-
-Prefer DMA for bulk data transfers (SPI, UART, I2C, ADC scan sequences, display framebuffers). DMA frees the CPU to run other tasks or sleep, reducing power consumption and improving throughput.
-
-> **Note:** Not all MCUs have DMA controllers, and available DMA channels may be limited. Treat this as a strong recommendation, not a universal rule. Verify DMA availability for your target before refactoring.
-
-### SPI Transfer
+Abstract the physical hardware watchdog behind a high-priority software manager task. Critical threads must periodically check in; if any thread deadlocks on a mutex, the supervisor intentionally starves the hardware watchdog to force a safe system reset.
 
 ```c
-// BAD: CPU-driven -- blocks task for entire transfer
-void vSendFrame(const uint8_t *buf, size_t len) {
-    for (size_t i = 0; i < len; i++) {
-        while (!(SPI1->SR & SPI_SR_TXE)) {}  // Spin per byte
-        SPI1->DR = buf[i];
+#define NUM_MONITORED_TASKS  3
+#define WDT_CHECKIN_PERIOD   pdMS_TO_TICKS(500)
+#define WDT_SUPERVISOR_PERIOD pdMS_TO_TICKS(250)
+
+static volatile uint32_t checkin_flags = 0;
+
+// Each monitored task checks in periodically
+void vTask_CheckIn(uint32_t task_id) {
+    taskENTER_CRITICAL();
+    checkin_flags |= (1UL << task_id);
+    taskEXIT_CRITICAL();
+}
+
+// Supervisor: highest priority, feeds HW watchdog only if all tasks checked in
+void vWatchdogSupervisor(void *pvParameters) {
+    const uint32_t all_flags = (1UL << NUM_MONITORED_TASKS) - 1;
+    while (1) {
+        vTaskDelay(WDT_SUPERVISOR_PERIOD);
+
+        taskENTER_CRITICAL();
+        uint32_t flags = checkin_flags;
+        checkin_flags = 0;  // Reset for next period
+        taskEXIT_CRITICAL();
+
+        if (flags == all_flags) {
+            HAL_IWDG_Refresh(&hiwdg);  // All tasks alive -- feed HW WDT
+        }
+        // else: deliberately starve HW WDT -> system reset
     }
-    while (SPI1->SR & SPI_SR_BSY) {}  // Wait for completion
-}
-
-// GOOD: DMA -- CPU is free during transfer, task blocks on notification
-static TaskHandle_t xSpiTaskHandle;
-
-void vSendFrame(const uint8_t *buf, size_t len) {
-    HAL_SPI_Transmit_DMA(&hspi1, buf, len);
-    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100)); // Block until DMA complete
-}
-
-void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
-    BaseType_t xWoken = pdFALSE;
-    vTaskNotifyGiveFromISR(xSpiTaskHandle, &xWoken);
-    portYIELD_FROM_ISR(xWoken);
 }
 ```
 
-### ADC Scan Sequence
+### Tickless Idle (Low-Power)
+
+For low-power constraints, implement Tickless Idle to dynamically suppress the periodic RTOS tick, allowing the CPU to remain in deep sleep for calculated durations.
 
 ```c
-// BAD: CPU polls each channel sequentially
-uint16_t adc_values[4];
-for (int ch = 0; ch < 4; ch++) {
-    HAL_ADC_Start(&hadc1);
-    HAL_ADC_PollForConversion(&hadc1, 100); // Blocks per channel
-    adc_values[ch] = HAL_ADC_GetValue(&hadc1);
-}
+// FreeRTOSConfig.h
+#define configUSE_TICKLESS_IDLE          2  // Custom tickless implementation
+#define configEXPECTED_IDLE_TIME_BEFORE_SLEEP  2  // Min ticks before sleeping
 
-// GOOD: DMA fills buffer in hardware, ISR signals task when done
-static uint16_t adc_dma_buffer[4];
-
-void vStartADCScan(void) {
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_dma_buffer, 4);
-}
-
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
-    BaseType_t xWoken = pdFALSE;
-    vTaskNotifyGiveFromISR(xAdcTaskHandle, &xWoken);
-    portYIELD_FROM_ISR(xWoken);
+// portSUPPRESS_TICKS_AND_SLEEP implementation (port-specific)
+void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime) {
+    // 1. Stop SysTick
+    // 2. Configure low-power timer (LPTIM/RTC) for xExpectedIdleTime ticks
+    // 3. Enter STOP/STANDBY mode
+    // 4. On wake: compensate tick count, restart SysTick
+    uint32_t ulCompleteTickPeriods = calculate_elapsed_ticks();
+    vTaskStepTick(ulCompleteTickPeriods);
 }
 ```
-
-### When to Keep CPU-Driven Transfers
-
-- Single-byte control registers or configuration writes (DMA setup overhead not justified)
-- MCUs without a DMA controller (e.g. some Cortex-M0 parts)
-- All DMA channels already allocated to higher-priority peripherals
 
 ---
 
-## 10. Defensive Programming
+## 10. Advanced Telemetry & Crash Persistence
+
+### Zero-Overhead Assertions
+
+Redefine `configASSERT()` to capture the Program Counter (PC) and Link Register (LR) via compiler intrinsics instead of storing massive `__FILE__` ASCII strings, shifting string resolution to the host PC.
+
+```c
+// BAD: Default configASSERT stores __FILE__ strings -- wastes flash
+#define configASSERT(x) if (!(x)) { printf("%s:%d\n", __FILE__, __LINE__); while(1); }
+
+// GOOD: Capture PC/LR -- resolve file:line on host via addr2line
+typedef struct {
+    uint32_t pc;
+    uint32_t lr;
+    uint32_t magic;
+} AssertInfo_t;
+
+static AssertInfo_t __attribute__((section(".noinit"))) assert_info;
+
+#define configASSERT(x) do { \
+    if (!(x)) { \
+        assert_info.pc = (uint32_t)__builtin_return_address(0); \
+        assert_info.lr = (uint32_t)__builtin_return_address(1); \
+        assert_info.magic = 0xDEADC0DE; \
+        NVIC_SystemReset(); \
+    } \
+} while(0)
+
+// Host-side: arm-none-eabi-addr2line -e firmware.elf 0x0800ABCD
+```
+
+### Crash Context Persistence (.noinit Region)
+
+Carve out a `.noinit` (NOLOAD) memory region in the SRAM linker script, protected by a "magic number", to persist crash logs, fault registers, and thread states across watchdog resets.
+
+```c
+// Linker script addition:
+// .noinit (NOLOAD) : { *(.noinit) } > RAM
+
+typedef struct {
+    uint32_t magic;          // 0xCRASH001 if valid
+    uint32_t reset_reason;
+    uint32_t fault_pc;
+    uint32_t fault_lr;
+    uint32_t cfsr;           // Configurable Fault Status Register
+    uint32_t hfsr;           // HardFault Status Register
+    char     task_name[16];
+    uint32_t uptime_ms;
+} CrashLog_t;
+
+static CrashLog_t __attribute__((section(".noinit"))) crash_log;
+
+// On boot: check for previous crash
+void vCheckCrashLog(void) {
+    if (crash_log.magic == 0xCRA50001) {
+        // Transmit crash_log over UART/telemetry before clearing
+        report_crash(&crash_log);
+        crash_log.magic = 0;
+    }
+}
+
+// In HardFault handler: populate crash_log
+void HardFault_Handler(void) {
+    crash_log.magic  = 0xCRA50001;
+    crash_log.cfsr   = SCB->CFSR;
+    crash_log.hfsr   = SCB->HFSR;
+    crash_log.fault_pc = __get_PSP();  // Approximate
+    // ... fill remaining fields ...
+    NVIC_SystemReset();
+}
+```
+
+### Deferred Binary Logging (TRICE / RTT)
+
+Remove ASCII string formatting from the target entirely. Use tools like TRICE to compile format strings into numeric IDs, flushing highly compressed raw binary payloads over UART or RTT to eliminate CPU blocking and timing "Heisenbugs".
+
+```c
+// BAD: printf in real-time path -- 100+ us per call, alters timing
+void vSensorTask(void *pvParameters) {
+    while (1) {
+        int32_t val = read_sensor();
+        printf("Sensor: %d mV at tick %lu\n", val, xTaskGetTickCount());
+        // ^ blocking UART, mutexes, heap allocation for format buffer
+    }
+}
+
+// GOOD: TRICE -- format string compiled to ID, ~100 ns per call
+// Host resolves ID -> format string from the ELF
+#include "trice.h"
+
+void vSensorTask(void *pvParameters) {
+    while (1) {
+        int32_t val = read_sensor();
+        TRICE32("Sensor: %d mV at tick %u\n", val, xTaskGetTickCount());
+        // ^ writes 8-12 bytes to ring buffer, no formatting on target
+    }
+}
+```
+
+---
+
+## 11. Defensive Programming
 
 ### Assertions for Development
 
@@ -638,7 +1022,13 @@ static void process_sample(int32_t raw) { /* ... */ }
 
 | Pattern | Rule |
 |---------|------|
-| Memory | All static. No malloc/free at runtime. |
+| Architecture | OSAL for portability. Config tables for reusable drivers. Opaque pointers for encapsulation. |
+| Off-Target Testing | Mock hardware via CMock/Unity/fff. Test logic on host PC. |
+| Memory | All static. No malloc/free at runtime. Use `xTaskCreateStatic`. |
+| Stack Protection | MPU/PSPLIM for safety-critical. Software watermarks for development only. |
+| Multicore (SMP) | Pin tasks to cores via `vTaskCoreAffinitySet`. Stream Buffers for cross-core data. |
+| Schedulability | RMS analysis: sum(WCET/Period) <= bound. Shorter period = higher priority. |
+| Active Objects | Private state + message queue. No shared mutexes. |
 | ISR | Short, non-blocking, use `...FromISR()`, always `portYIELD_FROM_ISR`. |
 | Tasks | Event-driven. Never poll. Never use arbitrary delays for sync. |
 | Sync | Task notifications > semaphores. Mutexes for exclusion (never binary sems). |
@@ -647,5 +1037,9 @@ static void process_sample(int32_t raw) { /* ... */ }
 | Timing | Interval subtraction for tick math. Bounded waits on hardware. |
 | Structs | Order by size. Verify with `_Static_assert`. |
 | DMA | Prefer DMA for bulk transfers. CPU-driven only for single-byte ops or when DMA unavailable. |
+| Watchdog | Software supervisor task. All critical tasks check in. Starve HW WDT on failure. |
+| Power | Tickless Idle for low-power. Suppress SysTick during deep sleep. |
+| Assertions | Zero-overhead: capture PC/LR, not `__FILE__`. Resolve on host. |
+| Crash Logs | `.noinit` SRAM region with magic number. Persist across resets. |
+| Logging | Binary logging (TRICE/RTT). No printf in real-time paths. |
 | Scope | `static` on file-local functions. `const` on read-only data. |
-| Assertions | `configASSERT()` liberally in development. Check all return values. |
