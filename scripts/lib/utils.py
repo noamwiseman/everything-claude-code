@@ -237,18 +237,24 @@ def read_stdin_json(options: dict | None = None) -> dict:
     max_size = opts.get("maxSize", 1024 * 1024)
     timeout_s = opts.get("timeoutS", 5)
 
-    def _timeout_handler(signum, frame):
+    prev_handler = None
+
+    def _timeout_handler(signum: int, frame) -> None:
         raise TimeoutError("stdin read timed out")
 
     try:
         if not is_windows and timeout_s:
-            signal.signal(signal.SIGALRM, _timeout_handler)
+            prev_handler = signal.signal(signal.SIGALRM, _timeout_handler)
             signal.alarm(timeout_s)
         data = sys.stdin.read(max_size)
         if not is_windows and timeout_s:
             signal.alarm(0)
+            signal.signal(signal.SIGALRM, prev_handler)
         return json.loads(data) if data.strip() else {}
     except (json.JSONDecodeError, OSError, TimeoutError):
+        if not is_windows and timeout_s and prev_handler is not None:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, prev_handler)
         return {}
 
 
