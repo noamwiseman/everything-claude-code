@@ -1,0 +1,32 @@
+[project]
+name = "claudio"
+version = "0.2.0a1"
+description = "Embedded Claude Code Toolkit — agents, skills, hooks, commands, and rules for firmware, RTOS, and bare-metal development"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.13"
+authors = [
+  { name = "Noam Wiseman", email = "noamwiseman@proton.me" }
+]
+keywords = [
+  "claude-code",
+  "ai",
+  "agents",
+  "skills",
+  "hooks",
+  "mcp",
+  "rules",
+  "claude",
+  "anthropic",
+  "embedded",
+  "firmware",
+  "rtos",
+]
+
+[project.urls]
+Homepage = "https://github.com/noamwiseman/claudio"
+Repository = "https://github.com/noamwiseman/claudio"
+Issues = "https://github.com/noamwiseman/claudio/issues"
+
+[tool.uv]
+dev-dependencies = []
