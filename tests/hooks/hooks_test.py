@@ -39,22 +39,6 @@ def test(name: str, fn) -> bool:
         return False
 
 
-async def async_test(name: str, fn) -> bool:
-    import asyncio
-    try:
-        await fn()
-        print(f"  \u2713 {name}")
-        return True
-    except AssertionError as e:
-        print(f"  \u2717 {name}")
-        print(f"    Error: {e}")
-        return False
-    except Exception as e:  # noqa: BLE001
-        print(f"  \u2717 {name}")
-        print(f"    Error: {e}")
-        return False
-
-
 def run_script(script_path: str, input_data: str = "", env: dict = None, timeout: int = 10) -> dict:
     """Run a Python script and capture output."""
     merged_env = {**os.environ, **(env or {})}

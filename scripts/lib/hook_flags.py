@@ -11,7 +11,6 @@ Controls:
 """
 
 import os
-from typing import Optional
 
 VALID_PROFILES = {"minimal", "standard", "strict"}
 
@@ -35,7 +34,7 @@ def get_disabled_hook_ids() -> set:
     return {normalize_id(v) for v in raw.split(",") if normalize_id(v)}
 
 
-def parse_profiles(raw_profiles, fallback: Optional[list] = None) -> list:
+def parse_profiles(raw_profiles, fallback: list | None = None) -> list:
     """Parse profiles from string, list, or None.
 
     Args:
@@ -66,7 +65,7 @@ def parse_profiles(raw_profiles, fallback: Optional[list] = None) -> list:
     return parsed if parsed else list(fallback)
 
 
-def is_hook_enabled(hook_id, options: Optional[dict] = None) -> bool:
+def is_hook_enabled(hook_id, options: dict | None = None) -> bool:
     """Check if a hook is enabled based on profile and disabled list.
 
     Args:

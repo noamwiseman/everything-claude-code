@@ -25,21 +25,6 @@ from pathlib import Path
 REPO_ROOT = str(Path(__file__).parent.parent.parent)
 
 
-async def async_test(name: str, fn) -> bool:
-    try:
-        await fn()
-        print(f"  \u2713 {name}")
-        return True
-    except AssertionError as e:
-        print(f"  \u2717 {name}")
-        print(f"    Error: {e}")
-        return False
-    except Exception as e:  # noqa: BLE001
-        print(f"  \u2717 {name}")
-        print(f"    Error: {e}")
-        return False
-
-
 def _resolve_command(command: str, env: dict = None) -> list:
     """Resolve a uv run hook command string to argv.
 

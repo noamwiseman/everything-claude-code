@@ -11,14 +11,15 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
 import unicodedata
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 # Platform detection
 is_windows = sys.platform == "win32"
@@ -102,7 +103,7 @@ def get_date_time_string() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def get_git_repo_name() -> Optional[str]:
+def get_git_repo_name() -> str | None:
     """Get the git repository name."""
     result = run_command("git rev-parse --show-toplevel")
     if not result["success"]:
@@ -110,7 +111,7 @@ def get_git_repo_name() -> Optional[str]:
     return Path(result["output"]).name
 
 
-def get_project_name() -> Optional[str]:
+def get_project_name() -> str | None:
     """Get project name from git repo or current directory."""
     repo_name = get_git_repo_name()
     if repo_name:
@@ -118,7 +119,7 @@ def get_project_name() -> Optional[str]:
     return Path.cwd().name or None
 
 
-def sanitize_session_id(raw: str) -> Optional[str]:
+def sanitize_session_id(raw: str) -> str | None:
     """Sanitize a string for use as a session filename segment.
 
     Replaces invalid characters with hyphens, collapses runs, strips
@@ -170,7 +171,7 @@ def get_session_id_short(fallback: str = "default") -> str:
     return sanitize_session_id(get_project_name()) or sanitize_session_id(fallback) or "default"
 
 
-def find_files(dir_path: str, pattern: str, options: Optional[dict] = None) -> list:
+def find_files(dir_path: str, pattern: str, options: dict | None = None) -> list:
     """Find files matching a pattern in a directory (cross-platform).
 
     Args:
@@ -224,23 +225,30 @@ def find_files(dir_path: str, pattern: str, options: Optional[dict] = None) -> l
     return results
 
 
-def read_stdin_json(options: Optional[dict] = None) -> dict:
+def read_stdin_json(options: dict | None = None) -> dict:
     """Read JSON from stdin (for hook input).
 
     Args:
-        options: Options dict with keys: maxSize (bytes)
+        options: Options dict with keys: maxSize (bytes), timeoutS (seconds, non-Windows only)
     Returns:
         Parsed JSON object, or empty dict if stdin is empty or invalid
     """
     opts = options or {}
     max_size = opts.get("maxSize", 1024 * 1024)
+    timeout_s = opts.get("timeoutS", 5)
+
+    def _timeout_handler(signum, frame):
+        raise TimeoutError("stdin read timed out")
 
     try:
+        if not is_windows and timeout_s:
+            signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(timeout_s)
         data = sys.stdin.read(max_size)
-        if data.strip():
-            return json.loads(data)
-        return {}
-    except (json.JSONDecodeError, OSError):
+        if not is_windows and timeout_s:
+            signal.alarm(0)
+        return json.loads(data) if data.strip() else {}
+    except (json.JSONDecodeError, OSError, TimeoutError):
         return {}
 
 
@@ -257,7 +265,7 @@ def output(data) -> None:
         print(data)
 
 
-def read_file(file_path: str) -> Optional[str]:
+def read_file(file_path: str) -> str | None:
     """Read a text file safely."""
     try:
         return Path(file_path).read_text(encoding="utf-8")
@@ -285,7 +293,7 @@ def command_exists(cmd: str) -> bool:
     return shutil.which(cmd) is not None
 
 
-def run_command(cmd: str, options: Optional[dict] = None) -> dict:
+def run_command(cmd: str, options: dict | None = None) -> dict:
     """Run a command and return output.
 
     SECURITY NOTE: Only use with trusted, hardcoded commands. Never pass
@@ -297,8 +305,6 @@ def run_command(cmd: str, options: Optional[dict] = None) -> dict:
     Returns:
         Dict with 'success' (bool) and 'output' (str) keys
     """
-    import shlex as _shlex
-
     allowed_prefixes = ["git ", "node ", "npx ", "which ", "where ", "python ", "uv "]
     if not any(cmd.startswith(prefix) for prefix in allowed_prefixes):
         return {"success": False, "output": "run_command blocked: unrecognized command prefix"}
@@ -310,7 +316,7 @@ def run_command(cmd: str, options: Optional[dict] = None) -> dict:
         return {"success": False, "output": "run_command blocked: shell metacharacters not allowed"}
 
     try:
-        argv = _shlex.split(cmd)
+        argv = shlex.split(cmd)
         result = subprocess.run(
             argv,
             shell=False,
@@ -318,7 +324,7 @@ def run_command(cmd: str, options: Optional[dict] = None) -> dict:
             text=True,
         )
         return {"success": result.returncode == 0, "output": result.stdout.strip()}
-    except Exception as e:  # noqa: BLE001
+    except (subprocess.SubprocessError, OSError, ValueError) as e:
         return {"success": False, "output": str(e)}
 
 
@@ -327,7 +333,7 @@ def is_git_repo() -> bool:
     return run_command("git rev-parse --git-dir")["success"]
 
 
-def get_git_modified_files(patterns: Optional[list] = None) -> list:
+def get_git_modified_files(patterns: list | None = None) -> list:
     """Get git modified files, optionally filtered by regex patterns.
 
     Args:
@@ -360,7 +366,7 @@ def get_git_modified_files(patterns: Optional[list] = None) -> list:
     return files
 
 
-def replace_in_file(file_path: str, search, replace: str, options: Optional[dict] = None) -> bool:
+def replace_in_file(file_path: str, search, replace: str, options: dict | None = None) -> bool:
     """Replace text in a file (cross-platform sed alternative).
 
     Args:
@@ -404,10 +410,7 @@ def count_in_file(file_path: str, pattern) -> int:
         return 0
 
     try:
-        if isinstance(pattern, str):
-            return len(re.findall(pattern, content))
-        else:
-            return len(re.findall(pattern, content))
+        return len(re.findall(pattern, content))
     except re.error:
         return 0
 

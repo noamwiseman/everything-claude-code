@@ -141,14 +141,14 @@ def main() -> None:
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)
                 hook_module = mod
-    except Exception as e:  # noqa: BLE001
+    except (ImportError, OSError, AttributeError) as e:
         sys.stderr.write(f"[Hook] import failed for {hook_id}: {e}\n")
 
     if hook_module and hasattr(hook_module, "run") and callable(hook_module.run):
         try:
             output = hook_module.run(raw, {"truncated": truncated, "maxStdin": MAX_STDIN})
             sys.exit(_emit_hook_result(raw, output))
-        except Exception as e:  # noqa: BLE001
+        except (RuntimeError, OSError, ValueError) as e:
             sys.stderr.write(f"[Hook] run() error for {hook_id}: {e}\n")
             sys.stdout.write(raw)
         sys.exit(0)
@@ -171,7 +171,7 @@ def main() -> None:
     except subprocess.TimeoutExpired:
         _write_stderr(f"[Hook] legacy hook timed out for {hook_id}")
         sys.exit(1)
-    except Exception as e:  # noqa: BLE001
+    except (OSError, ValueError) as e:
         _write_stderr(f"[Hook] legacy hook execution failed for {hook_id}: {e}")
         sys.exit(1)
 
@@ -192,6 +192,6 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
-    except Exception as e:  # noqa: BLE001
+    except (RuntimeError, OSError, ValueError) as e:
         sys.stderr.write(f"[Hook] run_with_flags error: {e}\n")
         sys.exit(0)

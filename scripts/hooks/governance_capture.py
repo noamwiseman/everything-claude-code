@@ -77,7 +77,7 @@ SENSITIVE_PATHS = [
 
 def generate_event_id() -> str:
     """Generate a unique event ID."""
-    ts = int(time.time() * 1000)
+    ts = time.time_ns() // 1_000_000
     rand = os.urandom(4).hex()
     return f"gov-{ts}-{rand}"
 
@@ -295,7 +295,7 @@ def run(raw_input: str, options: dict = None) -> str:
         })
         for event in events:
             _emit_governance_event(event)
-    except Exception:  # noqa: BLE001
+    except (json.JSONDecodeError, ValueError):
         # Silently ignore parse errors — never block the tool pipeline.
         pass
 
